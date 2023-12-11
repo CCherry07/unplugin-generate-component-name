@@ -46,5 +46,17 @@
     "@vue/compiler-sfc": "^3.3.11",
     "magic-string": "^0.30.5",
     "unplugin": "^1.5.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CCherry07/unplugin-generate-component-name.git"
+  },
+  "keywords": [
+    "unplugin"
+  ],
+  "bugs": {
+    "url": "https://github.com/CCherry07/unplugin-generate-component-name/issues"
+  },
+  "homepage": "https://github.com/CCherry07/unplugin-generate-component-name#readme",
+  "description": ""
 }
