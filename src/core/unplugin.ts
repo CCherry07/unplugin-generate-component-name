@@ -1,4 +1,4 @@
-import { basename, dirname, resolve } from "node:path"
+import { basename, dirname, resolve, sep } from "node:path"
 import fs from "fs/promises"
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import { createUnplugin } from "unplugin"
@@ -9,14 +9,6 @@ import traverse from '@babel/traverse'
 import { Options } from "../types"
 import { EXPORT_HELPER_ID } from "./constant"
 import { createFilter, parseVueRequest } from "./utils"
-
-declare global {
-  namespace NodeJS {
-    interface Process {
-      NODE_ENV: 'development' | string
-    }
-  }
-}
 
 export default createUnplugin((options: Options = {}) => {
   const { include, exclude = [] } = options
@@ -55,7 +47,6 @@ export default createUnplugin((options: Options = {}) => {
         filename: filename,
         ignoreEmpty: true
       })
-
       if (descriptor.script || descriptor.scriptSetup) {
         const { scriptAst, scriptSetupAst, loc, attrs } = compileScript(descriptor, {
           id,
@@ -95,13 +86,15 @@ export default createUnplugin((options: Options = {}) => {
           },
         })
         if (!hasNameProperty) {
-          const componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
+          let componentName = options.geComponentName?.(filename, filename.slice(process.cwd().length + 1).split(sep))
+          if (!componentName) {
+            componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
+          }
           const optionsNodePosition = {
             start: 0,
             end: 0
           }
           if (vueVersion) {
-            const s = new MagicString(code);
             const versionArr = vueVersion.match(/\d+/g)!
             const version = Number(versionArr[0] + versionArr[1] + versionArr[2])
             let lastImportEnd = 0;
@@ -130,6 +123,7 @@ export default createUnplugin((options: Options = {}) => {
                 }
               }
             })
+            const s = new MagicString(code);
             if (version >= 320) {
               if (!defineOptionsExist && optionsNodePosition.start === 0) {
                 const newImport = `\nimport { defineOptions } from 'vue';\n`;

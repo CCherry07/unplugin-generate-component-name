@@ -1,6 +1,7 @@
 export interface Options {
   include?: string | RegExp | (string | RegExp)[]
   exclude?: string | RegExp | (string | RegExp)[]
+  geComponentName?: (filePath: string, dirnames: string[]) => string | undefined
 }
 
 export interface VueQuery {
