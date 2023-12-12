@@ -3,7 +3,7 @@
   "private": false,
   "author": "CCherry07",
   "license": "MIT",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "type": "module",
   "exports": {
     ".": {
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.6.0",
+    "bumpp": "^9.2.1",
     "rollup": "^4.8.0",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2",
