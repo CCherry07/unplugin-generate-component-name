@@ -95,12 +95,13 @@ export default createUnplugin((options: Options = {}) => {
           },
         })
         if (!hasNameProperty) {
-          const parentFolderName = attrs.name ?? basename(dirname(filename));
+          const componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
           const optionsNodePosition = {
             start: 0,
             end: 0
           }
           if (vueVersion) {
+            const s = new MagicString(code);
             const versionArr = vueVersion.match(/\d+/g)!
             const version = Number(versionArr[0] + versionArr[1] + versionArr[2])
             let lastImportEnd = 0;
@@ -111,7 +112,8 @@ export default createUnplugin((options: Options = {}) => {
             }, {
               noScope: true,
               enter(path: any) {
-                if (path.isImportDeclaration() && !defineOptionsExist) {
+                if (path.isImportDeclaration()) {
+                  lastImportEnd = path.node.end
                   const specifiers = path.node.specifiers;
                   for (const specifier of specifiers) {
                     if (specifier.local.name === "defineOptions") {
@@ -128,39 +130,62 @@ export default createUnplugin((options: Options = {}) => {
                 }
               }
             })
-            if (!defineOptionsExist && optionsNodePosition.start === 0) {
-              const s = new MagicString(code);
-              traverse({
-                "type": "Program",
-                "sourceType": "module",
-                body: scriptSetupAst
-              }, {
-                noScope: true,
-                ImportDeclaration(path: { node: { end: number } }) {
-                  lastImportEnd = path.node.end;
-                }
-              });
-              if (version >= 320) {
+            if (version >= 320) {
+              if (!defineOptionsExist && optionsNodePosition.start === 0) {
                 const newImport = `\nimport { defineOptions } from 'vue';\n`;
-                const newCall = `defineOptions({name: "${parentFolderName}"});\n`;
+                const newCall = `defineOptions({name: "${componentName}"});\n`;
                 s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
                 code = s.toString();
-              } else {
-                const newExport = `
-                <script>
-                  export default {
-                    name: "${parentFolderName}",
-                  };\n
-                </script>`;
-                s.appendLeft(loc.start.offset, newExport);
-                code = s.toString();
+              } else if (defineOptionsExist) {
+                if (optionsNodePosition.start === 0) {
+                  const newCall = `\ndefineOptions({name: "${componentName}"});\n`;
+                  s.appendLeft(loc.start.offset + lastImportEnd, newCall);
+                  code = s.toString();
+                } else {
+                  traverse({
+                    "type": "Program",
+                    "sourceType": "module",
+                    body: [...scriptAst ?? [], ...scriptSetupAst ?? []],
+                  }, {
+                    noScope: true,
+                    enter(path: any) {
+                      if (path.isCallExpression() && defineOptionsExist) {
+                        const callee = path.node.callee;
+                        if (callee.type === "Identifier" && callee.name === 'defineOptions') {
+                          const args = path.node.arguments;
+                          if (args.length > 1) return
+                          if (args.length === 1 && args[0].type === "ObjectExpression") {
+                            const properties = args[0].properties;
+                            const baseOptions = {
+                              name: componentName
+                            }
+                            // @ts-ignore
+                            properties.forEach(prop => { baseOptions[prop.key.name] = prop.value.value })
+                            const newCall = `defineOptions(${JSON.stringify(baseOptions)});\n`;
+                            s.overwrite(optionsNodePosition.start, optionsNodePosition.end, newCall)
+                            code = s.toString()
+                          }
+                        }
+                      }
+                    }
+                  })
+                }
               }
-              return {
-                code,
-                map: s.generateMap({
-                  hires: true
-                })
-              }
+            } else {
+              const newExport = `
+              <script>
+                export default {
+                  name: "${componentName}",
+                };\n
+              </script>`;
+              s.appendLeft(loc.start.offset, newExport);
+              code = s.toString();
+            }
+            return {
+              code,
+              map: s.generateMap({
+                hires: true
+              })
             }
           }
         }
