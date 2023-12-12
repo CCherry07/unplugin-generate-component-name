@@ -3,7 +3,7 @@
   "private": false,
   "author": "CCherry07",
   "license": "MIT",
-  "version": "0.0.4",
+  "version": "0.0.3",
   "type": "module",
   "exports": {
     ".": {
@@ -39,7 +39,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch src"
+    "dev": "tsup --watch src",
+    "release": "bumpp && npm publish"
   },
   "devDependencies": {
     "@types/node": "^20.6.0",
