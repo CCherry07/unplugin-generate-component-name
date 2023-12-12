@@ -63,6 +63,7 @@ export default createUnplugin((options: Options = {}) => {
         });
         if (!scriptSetupAst && !scriptAst) return
         let hasNameProperty = false
+        let defineOptionsExist = false;
         traverse({
           "type": "Program",
           "sourceType": "module",
@@ -82,6 +83,7 @@ export default createUnplugin((options: Options = {}) => {
               if (callExpr.arguments.length) {
                 const arg = callExpr.arguments[0];
                 if (arg.type === 'ObjectExpression') {
+                  defineOptionsExist = true
                   for (const property of arg.properties) {
                     if (property.key.name === 'name' && property.value.type === 'StringLiteral') {
                       hasNameProperty = true
@@ -94,7 +96,10 @@ export default createUnplugin((options: Options = {}) => {
         })
         if (!hasNameProperty) {
           const parentFolderName = attrs.name ?? basename(dirname(filename));
-          let defineOptionsExist = false;
+          const optionsNodePosition = {
+            start: 0,
+            end: 0
+          }
           if (vueVersion) {
             const versionArr = vueVersion.match(/\d+/g)!
             const version = Number(versionArr[0] + versionArr[1] + versionArr[2])
@@ -105,8 +110,8 @@ export default createUnplugin((options: Options = {}) => {
               body: [...scriptAst ?? [], ...scriptSetupAst ?? []],
             }, {
               noScope: true,
-              enter(path: { isImportDeclaration: () => any; node: { specifiers: any; callee: any }; isCallExpression: () => any }) {
-                if (path.isImportDeclaration()) {
+              enter(path: any) {
+                if (path.isImportDeclaration() && !defineOptionsExist) {
                   const specifiers = path.node.specifiers;
                   for (const specifier of specifiers) {
                     if (specifier.local.name === "defineOptions") {
@@ -114,31 +119,16 @@ export default createUnplugin((options: Options = {}) => {
                     }
                   }
                 }
-                if (path.isCallExpression()) {
+                if (path.isCallExpression() && defineOptionsExist) {
                   const callee = path.node.callee;
                   if (callee.type === "Identifier" && callee.name === 'defineOptions') {
-                    // if (callee.arguments.length) {
-                    //   callee.arguments.push({
-                    //     key: {
-                    //       type: 'Identifier',
-                    //       name: 'name',
-                    //     },
-                    //     value: {
-                    //       type: 'StringLiteral',
-                    //       value: parentFolderName,
-                    //     },
-                    //     kind: 'init',
-                    //     method: false,
-                    //     shorthand: false,
-                    //     computed: false,
-                    //   })
-                    // }
-                    defineOptionsExist = true;
+                    optionsNodePosition.start = loc.start.offset + path.node.start
+                    optionsNodePosition.end = loc.start.offset + path.node.end
                   }
                 }
               }
             })
-            if (!defineOptionsExist) {
+            if (!defineOptionsExist && optionsNodePosition.start === 0) {
               const s = new MagicString(code);
               traverse({
                 "type": "Program",
