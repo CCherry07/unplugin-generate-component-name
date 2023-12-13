@@ -76,6 +76,15 @@ module.exports = {
 
 In Vue, we can use the `unplugin-generate-component-name` plugin to automatically generate component names based on directory names. This plugin makes it easier and more intuitive to find and manage components in a large codebase. For instance, let's say we have a Vue component named `Index.vue`, and this component is in the `Home` directory. With the `unplugin-generate-component-name` plugin, this component will automatically be named `Home`.
 
+```text
+src/home/
+├── index.vue // component name is Home
+├── about.vue
+└── users/
+    ├── index.vue // component name is Users
+    └── info.vue
+```
+
 ### Setup Extend
 
 Continuing with the Setup Extend demo is writing the name="Home" on the script tag.
@@ -97,3 +106,45 @@ Continuing with the Setup Extend demo is writing the name="Home" on the script t
 In the `<script setup>` tag, we set the name attribute to "Home". This explicitly names the component "Home", and the `unplugin-generate-component-name` plugin will use this name instead of "Index".
 
 Please note that you should first install and correctly configure the plugin in your `vite.config.js` or `webpack.config.js` file.
+
+### Options
+
+```ts
+interface Options {
+  include?: string | RegExp | (string | RegExp)[]
+  exclude?: string | RegExp | (string | RegExp)[]
+  geComponentName?: (filePath: string, dirnames: string[]) => string | undefined
+}
+```
+
+#### include
+
+The `include` option allows you to specify which files should be included for component name auto-generation. The value can be a string, regular expression, or an array of strings and regular expressions.
+
+#### exclude
+
+The `exclude` option is the opposite of `include` - it specifies which files should be excluded from auto-generation. The value can also be a string, regular expression, or an array of strings and regular expressions.
+
+#### geComponentName
+
+In your Vite or Webpack configuration file, you can configure the `unplugin-generate-component-name` plugin and define your `geComponentName` function (as shown in the Vite configuration example below).
+
+```ts
+// vite.config.ts
+import GenerateComponentName from 'unplugin-generate-component-name/vite'
+
+export default defineConfig({
+  plugins: [
+    GenerateComponentName({
+      geComponentName: (_filename, paths) => {
+        const basename = paths.at(-1)?.slice(0, -4)!
+        if (basename.toLocaleLowerCase() !== 'index') {
+          return `${paths.at(-2)}-${basename}` // dirname-basename home-[name]
+        }
+      }
+    }),
+  ],
+});
+```
+
+In this example, the `geComponentName` function has been defined so as to return a component name in the form of `${dirname}-${basename}` when the component's file name is not 'index', otherwise, it doesn't return anything which means the default naming of `dirname or setup extend name` will be used.
