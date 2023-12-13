@@ -1,4 +1,5 @@
-import { VueQuery } from "../types"
+import { basename, dirname, sep } from "path"
+import { VueQuery, Options } from "../types"
 
 export function parseVueRequest(id: string): {
   filename: string
@@ -76,4 +77,15 @@ export function createFilter(include: FilterPattern, exclude: FilterPattern) {
 function makeRegex(str: string) {
   const regex = str.replace(/[-[\]{}()*+?.\\^$|]/g, '\\$&').replace(/\\\*/g, '.*');
   return new RegExp(`^${regex}`, 'i');
+}
+
+export const getComponentName = ({ geComponentName, filename, attrs }: {
+  geComponentName: Options['geComponentName']
+  filename: string
+  attrs: Record<string, any>
+}) => {
+  let componentName = geComponentName?.(filename, filename.slice(process.cwd().length + 1).split(sep))
+  if (!componentName) {
+    componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
+  }
 }
