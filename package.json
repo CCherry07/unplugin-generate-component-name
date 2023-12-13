@@ -3,7 +3,7 @@
   "private": false,
   "author": "CCherry07",
   "license": "MIT",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "type": "module",
   "exports": {
     ".": {
