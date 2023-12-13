@@ -68,33 +68,34 @@ export default createUnplugin((options: Options = {}) => {
               );
             }
           },
-          CallExpression(path: { node: any }) {
+          CallExpression(path: any) {
             if (hasNameProperty) { return }
             const callExpr = path.node;
-            if (callExpr.callee.type === "Identifier" && callExpr.callee.name === 'defineOptions') {
-              const arg = callExpr.arguments[0];
-              if (arg.type === 'ObjectExpression') {
-                const baseOptions = {}
+            if (callExpr.callee.type === "Identifier" && callExpr.callee.name === "defineOptions") {
+              const arg = callExpr.arguments?.[0];
+              const baseOptions = {} as Record<string, string>;
+              if (arg && arg.type === "ObjectExpression") {
                 for (const property of arg.properties) {
-                  // @ts-ignore
-                  baseOptions[property.key.name] = property.value.value
-                  if (property.key.name === 'name' && property.value.type === 'StringLiteral') {
-                    hasNameProperty = true
+                  baseOptions[property.key.name] = property.value.value;
+                  if (property.key.name === "name" && property.value.type === "StringLiteral") {
+                    hasNameProperty = true;
                   }
                 }
-                if (!hasNameProperty) {
-                  const newCall = `defineOptions(${JSON.stringify({
-                    name: getComponentName({
-                      geComponentName: options.geComponentName,
-                      filename,
-                      attrs
-                    }),
-                    ...baseOptions
-                  })});\n`;
-                  s.overwrite(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset, newCall)
-                  code = s.toString()
-                  isHandle = true
-                }
+              }
+
+              if (!hasNameProperty) {
+                const newCall = `defineOptions(${JSON.stringify({
+                  name: getComponentName({
+                    geComponentName: options.geComponentName,
+                    filename,
+                    attrs
+                  }),
+                  ...baseOptions
+                })});
+`;
+                s.overwrite(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset, newCall);
+                code = s.toString();
+                isHandle = true;
               }
             }
           },
@@ -114,6 +115,7 @@ export default createUnplugin((options: Options = {}) => {
           const versionArr = vueVersion.match(/\d+/g)!
           const version = Number(versionArr[0] + versionArr[1] + versionArr[2])
           let lastImportEnd = 0;
+          let defineOptionsExist = false
           traverse({
             "type": "Program",
             "sourceType": "module",
@@ -125,31 +127,33 @@ export default createUnplugin((options: Options = {}) => {
               const specifiers = path.node.specifiers;
               for (const specifier of specifiers) {
                 if (specifier.local.name === "defineOptions") {
-                  const newCall = `defineOptions({name: "${componentName}"});\n`;
-                  s.appendLeft(loc.start.offset + lastImportEnd, newCall);
-                  code = s.toString();
-                  isHandle = true
+                  defineOptionsExist = true
                 }
               }
             }
           })
 
-          if (!isHandle) {
-            if (version >= 320) {
-              const newImport = `\nimport { defineOptions } from 'vue';\n`;
-              const newCall = `defineOptions({name: "${componentName}"});\n`;
-              s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
-              code = s.toString();
-            } else {
-              const newExport = `
+          if (defineOptionsExist) {
+            const newCall = `\ndefineOptions({name: "${componentName}"});\n`;
+            s.appendLeft(loc.start.offset + lastImportEnd, newCall);
+            code = s.toString();
+          }
+
+
+          if (version >= 320 && !defineOptionsExist) {
+            const newImport = `\nimport { defineOptions } from 'vue';\n`;
+            const newCall = `defineOptions({name: "${componentName}"});\n`;
+            s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
+            code = s.toString();
+          } else if (!defineOptionsExist) {
+            const newExport = `
                 <script>
                   export default {
                     name: "${componentName}",
                   };\n
                 </script>`;
-              s.appendLeft(loc.start.offset, newExport);
-              code = s.toString();
-            }
+            s.appendLeft(loc.start.offset, newExport);
+            code = s.toString();
           }
 
           return {

@@ -88,4 +88,5 @@ export const getComponentName = ({ geComponentName, filename, attrs }: {
   if (!componentName) {
     componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
   }
+  return componentName
 }
