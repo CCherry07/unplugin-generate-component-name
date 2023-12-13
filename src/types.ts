@@ -1,3 +1,4 @@
+// used?: string[] const isUse = process.env.NODE_ENV ? Array.isArray(options.used) ? options.used?.includes(process.env.NODE_ENV) : true : false
 export interface Options {
   include?: string | RegExp | (string | RegExp)[]
   exclude?: string | RegExp | (string | RegExp)[]

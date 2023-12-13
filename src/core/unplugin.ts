@@ -12,7 +12,6 @@ import { createFilter, parseVueRequest } from "./utils"
 
 export default createUnplugin((options: Options = {}) => {
   const { include, exclude = [] } = options
-  const isDev = process.env.NODE_ENV === 'development'
   const filter = createFilter(include || '**/index.vue', exclude)
   let vueVersion = ""
   return {
@@ -34,7 +33,6 @@ export default createUnplugin((options: Options = {}) => {
       }
     },
     async transform(code, id) {
-      if (!isDev) return
       const { filename, query } = parseVueRequest(id)
       if (query.raw || query.url) {
         return
