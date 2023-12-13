@@ -73,30 +73,32 @@ export default createUnplugin((options: Options = {}) => {
             const callExpr = path.node;
             if (callExpr.callee.type === "Identifier" && callExpr.callee.name === "defineOptions") {
               const arg = callExpr.arguments?.[0];
-              const baseOptions = {} as Record<string, string>;
               if (arg && arg.type === "ObjectExpression") {
                 for (const property of arg.properties) {
-                  baseOptions[property.key.name] = property.value.value;
                   if (property.key.name === "name" && property.value.type === "StringLiteral") {
                     hasNameProperty = true;
                   }
                 }
-              }
-
-              if (!hasNameProperty) {
-                const newCall = `defineOptions(${JSON.stringify({
-                  name: getComponentName({
+                if (!hasNameProperty) {
+                  const defineOptionsCode = s.slice(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset)
+                  const startPos = defineOptionsCode.indexOf('{') + 1;
+                  s.appendLeft(callExpr.start + loc.start.offset + startPos, `name:'${getComponentName({
                     geComponentName: options.geComponentName,
                     filename,
                     attrs
-                  }),
-                  ...baseOptions
-                })});
-`;
+                  })}',`);
+                  code = s.toString();
+                }
+              } else {
+                const newCall = `defineOptions({name: "${getComponentName({
+                  geComponentName: options.geComponentName,
+                  filename,
+                  attrs
+                })}"});\n`;
                 s.overwrite(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset, newCall);
                 code = s.toString();
-                isHandle = true;
               }
+              isHandle = true;
             }
           },
         })
@@ -134,24 +136,24 @@ export default createUnplugin((options: Options = {}) => {
           })
 
           if (defineOptionsExist) {
-            const newCall = `\ndefineOptions({name: "${componentName}"});\n`;
+            const newCall = `\ndefineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newCall);
             code = s.toString();
           }
 
 
           if (version >= 320 && !defineOptionsExist) {
-            const newImport = `\nimport { defineOptions } from 'vue';\n`;
-            const newCall = `defineOptions({name: "${componentName}"});\n`;
+            const newImport = `\nimport { defineOptions } from 'vue'; \n`;
+            const newCall = `defineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
             code = s.toString();
           } else if (!defineOptionsExist) {
             const newExport = `
-                <script>
-                  export default {
-                    name: "${componentName}",
-                  };\n
-                </script>`;
+                  <script>
+                export default {
+                  name: "${componentName}",
+                }; \n
+                  < /script>`;
             s.appendLeft(loc.start.offset, newExport);
             code = s.toString();
           }
