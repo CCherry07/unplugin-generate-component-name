@@ -5,6 +5,7 @@ import { createUnplugin } from "unplugin"
 import MagicString from 'magic-string'
 // @ts-ignore
 import traverse from '@babel/traverse'
+import { gte, minVersion } from "semver"
 
 import { Options } from "../types"
 import { EXPORT_HELPER_ID } from "./constant"
@@ -13,7 +14,7 @@ import { createFilter, getComponentName, parseVueRequest } from "./utils"
 export default createUnplugin((options: Options = {}) => {
   const { include, exclude = [] } = options
   const filter = createFilter(include || '**/index.vue', exclude)
-  let vueVersion = ""
+  let vueVersion: string | undefined
   return {
     name: "GeComponentName",
     enforce: 'pre',
@@ -21,7 +22,7 @@ export default createUnplugin((options: Options = {}) => {
       const packageJsonPath = resolve(process.cwd(), 'package.json');
       await fs.readFile(packageJsonPath).then(fileData => {
         const dependencies = JSON.parse(fileData.toString()).dependencies;
-        vueVersion = dependencies['vue']
+        vueVersion = minVersion(dependencies['vue'])?.version
       });
     },
     resolveId(id) {
@@ -46,10 +47,7 @@ export default createUnplugin((options: Options = {}) => {
         ignoreEmpty: true
       })
       if (descriptor.script || descriptor.scriptSetup) {
-        const { scriptAst, scriptSetupAst, loc, attrs } = compileScript(descriptor, {
-          id,
-          sourceMap: true
-        });
+        const { scriptAst, scriptSetupAst, loc, attrs } = compileScript(descriptor, { id });
         if (!scriptSetupAst && !scriptAst) return
         let hasNameProperty = false
         let isHandle = false
@@ -114,8 +112,6 @@ export default createUnplugin((options: Options = {}) => {
 
         if (vueVersion && !hasNameProperty) {
           const componentName = getComponentName({ geComponentName: options.geComponentName, filename, attrs })
-          const versionArr = vueVersion.match(/\d+/g)!
-          const version = Number(versionArr[0] + versionArr[1] + versionArr[2])
           let lastImportEnd = 0;
           let defineOptionsExist = false
           traverse({
@@ -139,15 +135,12 @@ export default createUnplugin((options: Options = {}) => {
             const newCall = `\ndefineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newCall);
             code = s.toString();
-          }
-
-
-          if (version >= 320 && !defineOptionsExist) {
+          } else if (gte(vueVersion, '3.2.0')) {
             const newImport = `\nimport { defineOptions } from 'vue'; \n`;
             const newCall = `defineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
             code = s.toString();
-          } else if (!defineOptionsExist) {
+          } else {
             const newExport = `
                   <script>
                 export default {
