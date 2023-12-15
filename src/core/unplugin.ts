@@ -3,17 +3,18 @@ import fs from "fs/promises"
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import { createUnplugin } from "unplugin"
 import MagicString from 'magic-string'
+import { createFilter } from "@rollup/pluginutils"
 // @ts-ignore
 import traverse from '@babel/traverse'
 import { gte, minVersion } from "semver"
-
 import { Options } from "../types"
-import { EXPORT_HELPER_ID } from "./constant"
-import { createFilter, getComponentName, parseVueRequest } from "./utils"
+import { getComponentName, parseVueRequest } from "./utils"
 
 export default createUnplugin((options: Options = {}) => {
-  const { include, exclude = [] } = options
-  const filter = createFilter(include || '**/index.vue', exclude)
+  const filter = createFilter(
+    options.include || ["**/index.vue"],
+    options.exclude || [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/],
+  )
   let vueVersion: string | undefined
   return {
     name: "GeComponentName",
@@ -25,23 +26,14 @@ export default createUnplugin((options: Options = {}) => {
         vueVersion = minVersion(dependencies['vue'])?.version
       });
     },
-    resolveId(id) {
-      if (id === EXPORT_HELPER_ID) {
-        return id
-      }
-      if (parseVueRequest(id).query.vue) {
-        return id
-      }
+    transformInclude(id) {
+      const { filename, query } = parseVueRequest(id)
+      if (query.raw || query.url) return
+      if (!filter(filename) && !query.vue) return
+      return true
     },
     async transform(code, id) {
-      const { filename, query } = parseVueRequest(id)
-      if (query.raw || query.url) {
-        return
-      }
-
-      if (!filter(filename) && !query.vue) {
-        return
-      }
+      const { filename } = parseVueRequest(id)
       const { descriptor } = vueParse(code, {
         filename: filename,
         ignoreEmpty: true
@@ -117,7 +109,7 @@ export default createUnplugin((options: Options = {}) => {
           traverse({
             "type": "Program",
             "sourceType": "module",
-            body: [...scriptAst ?? [], ...scriptSetupAst ?? []],
+            body: [...scriptSetupAst ?? []],
           }, {
             noScope: true,
             ImportDeclaration(path: any) {
@@ -130,27 +122,56 @@ export default createUnplugin((options: Options = {}) => {
               }
             }
           })
-
           if (defineOptionsExist) {
             const newCall = `\ndefineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newCall);
             code = s.toString();
-          } else if (gte(vueVersion, '3.2.0')) {
+          } else if (gte(vueVersion, '3.3.0')) {
             const newImport = `\nimport { defineOptions } from 'vue'; \n`;
             const newCall = `defineOptions({ name: "${componentName}" }); \n`;
             s.appendLeft(loc.start.offset + lastImportEnd, newImport + newCall);
             code = s.toString();
+          } else if (scriptAst) {
+            let ExportDefaultExist = false
+            const regExp = /<\/script>/g;
+            const matches = Array.from(code.matchAll(regExp));
+            const [index] = matches.map(match => match.index).filter(idx => idx !== loc.end.offset);
+            traverse({
+              "type": "Program",
+              "sourceType": "module",
+              body: [...scriptAst ?? []],
+            }, {
+              noScope: true,
+              ExportDefaultDeclaration(path: any) {
+                ExportDefaultExist = true
+                if (path.node.declaration.type === 'ObjectExpression') {
+                  const ExportDefaultIndex = code.indexOf('export default')
+                  s.appendLeft(code.slice(ExportDefaultIndex).indexOf('{') + ExportDefaultIndex + 1, `name:'${getComponentName({
+                    geComponentName: options.geComponentName,
+                    filename,
+                    attrs
+                  })}',`)
+                  code = s.toString()
+                }
+              }
+            })
+            if (!ExportDefaultExist && index) {
+              const newExport = ` export default {
+                name: "${componentName}",
+              }; \n`
+              s.appendLeft(index, newExport)
+              code = s.toString()
+            }
           } else {
             const newExport = `
-                  <script>
+              <script lang='${attrs.lang}'>
                 export default {
                   name: "${componentName}",
                 }; \n
-                  < /script>`;
-            s.appendLeft(loc.start.offset, newExport);
+                </script> \n`;
+            s.appendLeft(0, newExport);
             code = s.toString();
           }
-
           return {
             code,
             map: s.generateMap({

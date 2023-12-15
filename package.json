@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@babel/traverse": "^7.23.5",
+    "@rollup/pluginutils": "^5.1.0",
     "@vue/compiler-sfc": "^3.3.11",
     "magic-string": "^0.30.5",
     "semver": "^7.5.4",
