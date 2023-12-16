@@ -1,0 +1,18 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`The behavior of transform in Vue 3.3.0 and above. > Component name is dirname 1`] = `
+"<template>
+  <div>
+    {{ a }}
+    <ComponentB/>
+  </div>
+</template>
+<script setup lang="ts">
+import ComponentB from "../ComponentB/index.vue";
+import { defineOptions } from 'vue'; 
+defineOptions({ name: "ComponentA" }); 
+
+const a = ('component A')
+</script>
+"
+`;
