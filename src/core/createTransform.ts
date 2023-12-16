@@ -38,6 +38,7 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
           const callExpr = path.node;
           if (callExpr.callee.type === "Identifier" && callExpr.callee.name === "defineOptions") {
             const arg = callExpr.arguments?.[0];
+            const componentName = getComponentName({ geComponentName: options?.geComponentName, filename, attrs })
             if (arg && arg.type === "ObjectExpression") {
               for (const property of arg.properties) {
                 if (property.key.name === "name" && property.value.type === "StringLiteral") {
@@ -47,19 +48,11 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
               if (!hasNameProperty) {
                 const defineOptionsCode = s.slice(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset)
                 const startPos = defineOptionsCode.indexOf('{') + 1;
-                s.appendLeft(callExpr.start + loc.start.offset + startPos, `name:'${getComponentName({
-                  geComponentName: options?.geComponentName,
-                  filename,
-                  attrs
-                })}',`);
+                s.appendLeft(callExpr.start + loc.start.offset + startPos, `name:'${componentName}',`);
                 code = s.toString();
               }
             } else {
-              const newCall = `defineOptions({name: "${getComponentName({
-                geComponentName: options?.geComponentName,
-                filename,
-                attrs
-              })}"});\n`;
+              const newCall = `defineOptions({name: "${componentName}"});\n`;
               s.overwrite(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset, newCall);
               code = s.toString();
             }
@@ -121,11 +114,7 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
               ExportDefaultExist = true
               if (path.node.declaration.type === 'ObjectExpression') {
                 const ExportDefaultIndex = code.indexOf('export default')
-                s.appendLeft(code.slice(ExportDefaultIndex).indexOf('{') + ExportDefaultIndex + 1, `name:'${getComponentName({
-                  geComponentName: options?.geComponentName,
-                  filename,
-                  attrs
-                })}',`)
+                s.appendLeft(code.slice(ExportDefaultIndex).indexOf('{') + ExportDefaultIndex + 1, `name:'${componentName}',`)
                 code = s.toString()
               }
             }
