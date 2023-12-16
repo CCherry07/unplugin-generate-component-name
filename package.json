@@ -38,8 +38,9 @@
     }
   },
   "scripts": {
-    "build": "tsup",
+    "test": "vitest",
     "dev": "tsup --watch src",
+    "build": "tsup",
     "release": "bumpp && npm run build && npm publish --registry=https://registry.npmjs.org/"
   },
   "devDependencies": {
@@ -49,7 +50,8 @@
     "rollup": "^4.8.0",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.6"
+    "vite": "^5.0.6",
+    "vitest": "^1.0.4"
   },
   "dependencies": {
     "@babel/traverse": "^7.23.5",
