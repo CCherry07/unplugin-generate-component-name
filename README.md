@@ -4,7 +4,7 @@ A plugin for auto generate vue component name.
 
 ###### Features
 
-- 💚 Supports both Vue 2 and Vue 3 out-of-the-box.
+- 💚 Supports Vue 3 out-of-the-box.
 - ⚡️ Supports Vite, Webpack, Rspack, Vue CLI, Rollup, esbuild and more, powered by <a href="https://github.com/unjs/unplugin">unplugin</a>.
 - 🪐 Folder names and [Setup extend](https://cn.vuejs.org/api/sfc-script-setup.html#script-setup) two patterns.
 - 🦾 Full TypeScript support.
@@ -110,24 +110,37 @@ Please note that you should first install and correctly configure the plugin in 
 ### Options
 
 ```ts
-interface Options {
-  include?: string | RegExp | (string | RegExp)[]
-  exclude?: string | RegExp | (string | RegExp)[]
-  geComponentName?: (filePath: string, dirnames: string[]) => string | undefined
+type GeComponentName = (opt: {
+    filePath: string;
+    dirname: string;
+    originalName: string;
+    attrName: string | undefined;
+}) => string;
+interface PattenOptions {
+    include?: string | RegExp | (string | RegExp)[];
+    exclude?: string | RegExp | (string | RegExp)[];
+    geComponentName: GeComponentName;
+}
+interface Options extends Omit<PattenOptions, 'geComponentName'> {
+    enter?: PattenOptions[];
 }
 ```
 
 #### include
 
-The `include` option allows you to specify which files should be included for component name auto-generation. The value can be a string, regular expression, or an array of strings and regular expressions.
+The `include` option is utilized to specifically state the files that should be processed for component name auto-generation. This safeguard can be specified using a string, a regular expression, or an array that can hold a collection of both.
 
 #### exclude
 
-The `exclude` option is the opposite of `include` - it specifies which files should be excluded from auto-generation. The value can also be a string, regular expression, or an array of strings and regular expressions.
+On the flip side, the `exclude` option operates by dictating the files that should abstain from the auto-generation process. This restriction can also be imposed using a string, a regular expression, or a combination of both held in an array.
 
-#### geComponentName
+#### enter
 
-In your Vite or Webpack configuration file, you can configure the `unplugin-generate-component-name` plugin and define your `geComponentName` function (as shown in the Vite configuration example below).
+In the `Options` interface, there's an `enter` option. `enter` is an array where each object acts as a specific set of rules for handling different file paths.
+
+Each set of rules can include `include` and `exclude` options which specify which files need special handling. Their value can be a string, a RegExp, or an array consisting of strings and RegExps. You can also specify a `geComponentName` function for custom component name generation.
+
+Here's an example:
 
 ```ts
 // vite.config.ts
@@ -135,16 +148,23 @@ import GenerateComponentName from 'unplugin-generate-component-name/vite'
 
 export default defineConfig({
   plugins: [
-    GenerateComponentName({
-      geComponentName: (_filename, paths) => {
-        const basename = paths.at(-1)?.slice(0, -4)!
-        if (basename.toLocaleLowerCase() !== 'index') {
-          return `${paths.at(-2)}-${basename}` // dirname-basename home-[name]
-        }
-      }
+     GenerateComponentName({
+      include: ['**/*.vue'],
+      enter: [{
+        include: ["**/*index.vue"],
+        geComponentName: ({ attrName, dirname }) => attrName ?? dirname
+      }, {
+        exclude: ['**/*.index.vue'],
+        include: ["src/components/**/*.vue"],
+        geComponentName: ({ dirname, originalName }) => `${dirname}-${originalName}`
+      }]
     }),
   ],
 });
 ```
 
-In this example, the `geComponentName` function has been defined so as to return a component name in the form of `${dirname}-${basename}` when the component's file name is not 'index', otherwise, it doesn't return anything which means the default naming of `dirname or setup extend name` will be used.
+In this example, the `unplugin-generate-component-name` plugin is configured to process all .vue files. There are two objects within the `enter` option for different file paths:
+
+- The first object covers all files that end with `"index.vue"`. The `geComponentName` function returns the component name. If a `name` is already specified in the `script setup tag`, it will be prioritized; otherwise, the directory name (`dirname`) will be used.
+
+- The second object excludes all files ending with `"index.vue"` and only includes `.vue` files within the `"src/components/"` directory. A `geComponentName` function is used to generate the component name in the format of `${dirname}-${originalName}`.For instance, for a file named`MyButton.vue` in `src/components/Button`, it will be`Button-MyButton`.

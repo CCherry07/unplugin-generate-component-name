@@ -1,6 +1,13 @@
 // used?: string[] const isUse = process.env.NODE_ENV ? Array.isArray(options.used) ? options.used?.includes(process.env.NODE_ENV) : true : false
-export type GeComponentName = (filePath: string, dirnames: string[]) => string
-export type Filters = {
+
+export type GeComponentName = (opt: {
+  filePath: string,
+  dirname: string,
+  originalName: string
+  attrName: string | undefined
+}) => string
+
+export type FilteringRules = {
   filter: (id: unknown) => boolean;
   geComponentName: GeComponentName;
 }[]

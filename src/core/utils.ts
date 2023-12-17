@@ -1,5 +1,5 @@
-import { basename, dirname, sep } from "path"
-import type { VueQuery, Filters } from "../types"
+import { basename, dirname, extname } from "path"
+import type { VueQuery, FilteringRules } from "../types"
 
 export function parseVueRequest(id: string): {
   filename: string
@@ -28,21 +28,19 @@ export function parseVueRequest(id: string): {
   }
 }
 
-export function isObject(obj: any): obj is Object {
-  return Object.prototype.toString.call(obj) === "[object Object]";
-}
-
-export function isString(obj: any): obj is string {
-  return Object.prototype.toString.call(obj) === "[object String]";
-}
-
 export const getComponentName = ({ filters, filename, attrs }: {
-  filters?: Filters
+  filters?: FilteringRules
   filename: string
   attrs: Record<string, any>
 }) => {
   const geComponentName = filters?.find(({ filter }) => filter(filename))?.geComponentName
+  const originalName = basename(filename).replace(extname(filename), '')
   return geComponentName
-    ? geComponentName(filename, filename.slice(process.cwd().length + 1).split(sep))
-    : attrs.name ?? basename(dirname(filename));
+    ? geComponentName({
+      filePath: filename,
+      originalName,
+      attrName: attrs.name,
+      dirname: basename(dirname(filename))
+    })
+    : originalName
 }
