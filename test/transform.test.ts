@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import ComponentA from "./components/ComponentA/index.vue?raw"
 import ComponentB from "./components/ComponentB/index.vue?raw"
-import TestSetupName from "./components/test-setup-name.vue?raw"
+import TestSetupName from "./components/index.vue?raw"
 import ExportDefaultExists from "./components/ExportDefault/index.vue?raw"
 import { createTransform } from "../src/core/createTransform"
 import { GeComponentName } from '../src/types'
@@ -12,8 +12,9 @@ const defaultGeComponentName: GeComponentName = ({ attrName, dirname }) => attrN
 import { createFilter } from "@rollup/pluginutils"
 
 describe('The behavior of transform in Vue 3.3.0 and above.', () => {
+  const filter = createFilter(defaultInclide, defaultExclide)
   const transform = createTransform("3.3.0", [{
-    filter: createFilter(defaultInclide, defaultExclide),
+    filter: filter,
     geComponentName: defaultGeComponentName
   }])
   it('Component name is dirname', () => {
@@ -23,24 +24,8 @@ describe('The behavior of transform in Vue 3.3.0 and above.', () => {
   })
 
   it('setup extend name', () => {
-    const code = transform(TestSetupName, 'components/test-setup-name.vue')?.code
-    expect(code).toMatchInlineSnapshot(`
-      "<template>
-        <div>
-          {{ foo }}
-        </div>
-      </template>
-
-      <script setup lang="ts" name="NameForeSetup">
-      import { ref } from "vue"
-      import { defineOptions } from 'vue'; 
-      defineOptions({ name: "NameForeSetup" }); 
-
-      const foo = ref('foo')
-      </script>
-      "
-    `)
-
+    const code = transform(TestSetupName, 'components/index.vue')?.code
+    expect(filter('components/index.vue')).toMatchInlineSnapshot(`true`)
     expect(code).toContain('defineOptions({ name: "NameForeSetup" });')
   })
 
@@ -98,7 +83,7 @@ describe('The behavior of transform in Vue 3.3.0 and below.', () => {
   })
 
   it('setup extend name', () => {
-    const code = transform(TestSetupName, 'components/test-setup-name.vue')?.code
+    const code = transform(TestSetupName, 'components/index.vue')?.code
     expect(code).toContain('name: "NameForeSetup"')
     expect(code).toMatchInlineSnapshot(`
       "

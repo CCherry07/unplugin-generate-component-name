@@ -37,7 +37,7 @@ export default createUnplugin((options: Options = {}) => {
     transformInclude(id) {
       const { filename, query } = parseVueRequest(id)
       if (query.raw || query.url) return
-      if (!filter(filename) && !query.vue) return
+      if (!query.vue && !filter(filename) || !filters.some(o => o.filter(filename))) return
       return true
     },
     transform(code, id) {
