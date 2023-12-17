@@ -4,9 +4,18 @@ import ComponentB from "./components/ComponentB/index.vue?raw"
 import TestSetupName from "./components/test-setup-name.vue?raw"
 import ExportDefaultExists from "./components/ExportDefault/index.vue?raw"
 import { createTransform } from "../src/core/createTransform"
+import { GeComponentName } from '../src/types'
+
+const defaultInclide = ["**/index.vue"]
+const defaultExclide = [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/]
+const defaultGeComponentName: GeComponentName = ({ attrName, dirname }) => attrName ?? dirname
+import { createFilter } from "@rollup/pluginutils"
 
 describe('The behavior of transform in Vue 3.3.0 and above.', () => {
-  const transform = createTransform("3.3.0")
+  const transform = createTransform("3.3.0", [{
+    filter: createFilter(defaultInclide, defaultExclide),
+    geComponentName: defaultGeComponentName
+  }])
   it('Component name is dirname', () => {
     const code = transform(ComponentA, 'components/ComponentA/index.vue')?.code
     expect(code).toContain('defineOptions({ name: "ComponentA" });')
@@ -15,6 +24,23 @@ describe('The behavior of transform in Vue 3.3.0 and above.', () => {
 
   it('setup extend name', () => {
     const code = transform(TestSetupName, 'components/test-setup-name.vue')?.code
+    expect(code).toMatchInlineSnapshot(`
+      "<template>
+        <div>
+          {{ foo }}
+        </div>
+      </template>
+
+      <script setup lang="ts" name="NameForeSetup">
+      import { ref } from "vue"
+      import { defineOptions } from 'vue'; 
+      defineOptions({ name: "NameForeSetup" }); 
+
+      const foo = ref('foo')
+      </script>
+      "
+    `)
+
     expect(code).toContain('defineOptions({ name: "NameForeSetup" });')
   })
 
@@ -42,7 +68,10 @@ describe('The behavior of transform in Vue 3.3.0 and above.', () => {
 })
 
 describe('The behavior of transform in Vue 3.3.0 and below.', () => {
-  const transform = createTransform("3.2.47")
+  const transform = createTransform("3.2.47", [{
+    filter: createFilter(defaultInclide, defaultExclide),
+    geComponentName: defaultGeComponentName
+  }])
   it('Component name is dirname', () => {
     const code = transform(ComponentA, 'components/ComponentA/index.vue')?.code
     expect(code).not.toContain('defineOptions({ name: "ComponentA" });')

@@ -42,5 +42,5 @@ export const getComponentName = ({ filters, filename, attrs }: {
       attrName: attrs.name,
       dirname: basename(dirname(filename))
     })
-    : originalName
+    : attrs.name ?? originalName
 }

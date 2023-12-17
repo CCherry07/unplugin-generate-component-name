@@ -1,12 +1,12 @@
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
-import type { Filters } from '../types'
+import type { FilteringRules } from '../types'
 // @ts-ignore
 import traverse from '@babel/traverse'
 import { gte } from "semver"
 import { getComponentName, parseVueRequest } from "./utils"
 
-export const createTransform = (vueVersion?: string, filters?: Filters) => {
+export const createTransform = (vueVersion?: string, filters?: FilteringRules) => {
   return (code: string, id: string) => {
     const { filename } = parseVueRequest(id)
     const { descriptor } = vueParse(code, {
