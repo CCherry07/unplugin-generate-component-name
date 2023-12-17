@@ -1,8 +1,16 @@
 // used?: string[] const isUse = process.env.NODE_ENV ? Array.isArray(options.used) ? options.used?.includes(process.env.NODE_ENV) : true : false
-export interface Options {
+export type GeComponentName = (filePath: string, dirnames: string[]) => string
+export type Filters = {
+  filter: (id: unknown) => boolean;
+  geComponentName: GeComponentName;
+}[]
+export interface PattenOptions {
   include?: string | RegExp | (string | RegExp)[]
   exclude?: string | RegExp | (string | RegExp)[]
-  geComponentName?: (filePath: string, dirnames: string[]) => string | undefined
+  geComponentName: GeComponentName
+}
+export interface Options extends Omit<PattenOptions, 'geComponentName'> {
+  enter?: PattenOptions[]
 }
 
 export interface VueQuery {

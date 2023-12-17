@@ -7,12 +7,19 @@ import type { Options } from "../types"
 import { parseVueRequest } from "./utils"
 import { createTransform } from "./createTransform"
 
+const defaultInclide = ["**/index.vue"]
+const defaultExclide = [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/]
+
 export default createUnplugin((options: Options = {}) => {
   const filter = createFilter(
-    options.include || ["**/index.vue"],
-    options.exclude || [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/],
+    options.include || defaultInclide,
+    options.exclude || defaultExclide,
   )
+
+  const filters = options.enter?.map(({ include, exclude, geComponentName }) => ({ filter: createFilter(include, exclude), geComponentName }))
+
   let vueVersion: string | undefined
+
   return {
     name: "GeComponentName",
     enforce: 'pre',
@@ -30,7 +37,7 @@ export default createUnplugin((options: Options = {}) => {
       return true
     },
     transform(code, id) {
-      return createTransform(vueVersion, options)(code, id)
+      return createTransform(vueVersion, filters)(code, id)
     },
   }
 })

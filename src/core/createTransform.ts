@@ -1,12 +1,12 @@
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
-import type { Options } from '../types'
+import type { Filters } from '../types'
 // @ts-ignore
 import traverse from '@babel/traverse'
 import { gte } from "semver"
 import { getComponentName, parseVueRequest } from "./utils"
 
-export const createTransform = (vueVersion?: string, options?: Options) => {
+export const createTransform = (vueVersion?: string, filters?: Filters) => {
   return (code: string, id: string) => {
     const { filename } = parseVueRequest(id)
     const { descriptor } = vueParse(code, {
@@ -38,7 +38,7 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
           const callExpr = path.node;
           if (callExpr.callee.type === "Identifier" && callExpr.callee.name === "defineOptions") {
             const arg = callExpr.arguments?.[0];
-            const componentName = getComponentName({ geComponentName: options?.geComponentName, filename, attrs })
+            const componentName = getComponentName({ filters, filename, attrs })
             if (arg && arg.type === "ObjectExpression") {
               for (const property of arg.properties) {
                 if (property.key.name === "name" && property.value.type === "StringLiteral") {
@@ -71,7 +71,7 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
       }
 
       if (vueVersion && !hasNameProperty) {
-        const componentName = getComponentName({ geComponentName: options?.geComponentName, filename, attrs })
+        const componentName = getComponentName({ filters, filename, attrs })
         let lastImportEnd = 0;
         let defineOptionsExist = false
         traverse({
@@ -145,5 +145,4 @@ export const createTransform = (vueVersion?: string, options?: Options) => {
       }
     }
   }
-
 }

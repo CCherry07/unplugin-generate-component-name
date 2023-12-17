@@ -1,5 +1,5 @@
 import { basename, dirname, sep } from "path"
-import { VueQuery, Options } from "../types"
+import type { VueQuery, Filters } from "../types"
 
 export function parseVueRequest(id: string): {
   filename: string
@@ -28,65 +28,21 @@ export function parseVueRequest(id: string): {
   }
 }
 
-type FilterPattern = string | RegExp | boolean | ((id: string) => boolean) | Array<FilterPattern>;
-
-export function createFilter(include: FilterPattern, exclude: FilterPattern) {
-  const getMatcher = (id: FilterPattern): ((id: string) => boolean) => {
-    if (id instanceof RegExp) {
-      return id.test.bind(id);
-    }
-    if (typeof id === 'boolean') {
-      return id ? (() => true) : (() => false);
-    }
-    if (typeof id === 'string') {
-      if (id.startsWith('/')) {
-        return (file) => id === file;
-      }
-      const regex = makeRegex(id);
-      return (file) => regex.test(file);
-    }
-    if (Array.isArray(id)) {
-      const ids = id.map(getMatcher).filter(Boolean);
-      return (file) => ids.some((id) => id(file));
-    }
-    if (typeof id === 'function') {
-      return id;
-    }
-    throw new Error(`cannot convert ${typeof id} to a matcher: ${id}`);
-  };
-
-  const filt = (pattern: FilterPattern) => {
-    const fn = getMatcher(pattern);
-    return (id: string) => fn(id.replace(/\\/g, '/'));
-  };
-
-  const includeFn = include && filt(include);
-  const excludeFn = exclude && filt(exclude);
-
-  return function filter(id: string) {
-    if (excludeFn && excludeFn(id)) {
-      return false;
-    }
-    if (includeFn) {
-      return includeFn(id);
-    }
-    return !!excludeFn;
-  };
+export function isObject(obj: any): obj is Object {
+  return Object.prototype.toString.call(obj) === "[object Object]";
 }
 
-function makeRegex(str: string) {
-  const regex = str.replace(/[-[\]{}()*+?.\\^$|]/g, '\\$&').replace(/\\\*/g, '.*');
-  return new RegExp(`^${regex}`, 'i');
+export function isString(obj: any): obj is string {
+  return Object.prototype.toString.call(obj) === "[object String]";
 }
 
-export const getComponentName = ({ geComponentName, filename, attrs }: {
-  geComponentName: Options['geComponentName']
+export const getComponentName = ({ filters, filename, attrs }: {
+  filters?: Filters
   filename: string
   attrs: Record<string, any>
 }) => {
-  let componentName = geComponentName?.(filename, filename.slice(process.cwd().length + 1).split(sep))
-  if (!componentName) {
-    componentName = typeof attrs.name === 'string' ? attrs.name : basename(dirname(filename));
-  }
-  return componentName
+  const geComponentName = filters?.find(({ filter }) => filter(filename))?.geComponentName
+  return geComponentName
+    ? geComponentName(filename, filename.slice(process.cwd().length + 1).split(sep))
+    : attrs.name ?? basename(dirname(filename));
 }
