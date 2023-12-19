@@ -1,6 +1,6 @@
 // used?: string[] const isUse = process.env.NODE_ENV ? Array.isArray(options.used) ? options.used?.includes(process.env.NODE_ENV) : true : false
 
-export type GeComponentName = (opt: {
+export type GenComponentName = (opt: {
   filePath: string,
   dirname: string,
   originalName: string
@@ -9,14 +9,14 @@ export type GeComponentName = (opt: {
 
 export type FilteringRules = {
   filter: (id: unknown) => boolean;
-  geComponentName: GeComponentName;
+  genComponentName: GenComponentName;
 }[]
 export interface PattenOptions {
   include?: string | RegExp | (string | RegExp)[]
   exclude?: string | RegExp | (string | RegExp)[]
-  geComponentName: GeComponentName
+  genComponentName: GenComponentName
 }
-export interface Options extends Omit<PattenOptions, 'geComponentName'> {
+export interface Options extends Omit<PattenOptions, 'genComponentName'> {
   enter?: PattenOptions[]
 }
 

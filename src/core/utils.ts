@@ -33,10 +33,10 @@ export const getComponentName = ({ filters, filename, attrs }: {
   filename: string
   attrs: Record<string, any>
 }) => {
-  const geComponentName = filters?.find(({ filter }) => filter(filename))?.geComponentName
+  const genComponentName = filters?.find(({ filter }) => filter(filename))?.genComponentName
   const originalName = basename(filename).replace(extname(filename), '')
-  return geComponentName
-    ? geComponentName({
+  return genComponentName
+    ? genComponentName({
       filePath: filename,
       originalName,
       attrName: attrs.name,

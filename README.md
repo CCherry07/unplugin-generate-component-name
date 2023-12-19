@@ -110,7 +110,7 @@ Please note that you should first install and correctly configure the plugin in 
 ### Options
 
 ```ts
-type GeComponentName = (opt: {
+type GenComponentName = (opt: {
     filePath: string;
     dirname: string;
     originalName: string;
@@ -119,9 +119,9 @@ type GeComponentName = (opt: {
 interface PattenOptions {
     include?: string | RegExp | (string | RegExp)[];
     exclude?: string | RegExp | (string | RegExp)[];
-    geComponentName: GeComponentName;
+    genComponentName: GenComponentName;
 }
-interface Options extends Omit<PattenOptions, 'geComponentName'> {
+interface Options extends Omit<PattenOptions, 'genComponentName'> {
     enter?: PattenOptions[];
 }
 ```
@@ -138,7 +138,7 @@ On the flip side, the `exclude` option operates by dictating the files that shou
 
 In the `Options` interface, there's an `enter` option. `enter` is an array where each object acts as a specific set of rules for handling different file paths.
 
-Each set of rules can include `include` and `exclude` options which specify which files need special handling. Their value can be a string, a RegExp, or an array consisting of strings and RegExps. You can also specify a `geComponentName` function for custom component name generation.
+Each set of rules can include `include` and `exclude` options which specify which files need special handling. Their value can be a string, a RegExp, or an array consisting of strings and RegExps. You can also specify a `genComponentName` function for custom component name generation.
 
 Here's an example:
 
@@ -152,11 +152,11 @@ export default defineConfig({
       include: ['**/*.vue'],
       enter: [{
         include: ["**/*index.vue"],
-        geComponentName: ({ attrName, dirname }) => attrName ?? dirname
+        genComponentName: ({ attrName, dirname }) => attrName ?? dirname
       }, {
         exclude: ['**/*.index.vue'],
         include: ["src/components/**/*.vue"],
-        geComponentName: ({ dirname, originalName }) => `${dirname}-${originalName}`
+        genComponentName: ({ dirname, originalName }) => `${dirname}-${originalName}`
       }]
     }),
   ],
@@ -165,6 +165,6 @@ export default defineConfig({
 
 In this example, the `unplugin-generate-component-name` plugin is configured to process all .vue files. There are two objects within the `enter` option for different file paths:
 
-- The first object covers all files that end with `"index.vue"`. The `geComponentName` function returns the component name. If a `name` is already specified in the `script setup tag`, it will be prioritized; otherwise, the directory name (`dirname`) will be used.
+- The first object covers all files that end with `"index.vue"`. The `genComponentName` function returns the component name. If a `name` is already specified in the `script setup tag`, it will be prioritized; otherwise, the directory name (`dirname`) will be used.
 
-- The second object excludes all files ending with `"index.vue"` and only includes `.vue` files within the `"src/components/"` directory. A `geComponentName` function is used to generate the component name in the format of `${dirname}-${originalName}`.For instance, for a file named`MyButton.vue` in `src/components/Button`, it will be`Button-MyButton`.
+- The second object excludes all files ending with `"index.vue"` and only includes `.vue` files within the `"src/components/"` directory. A `genComponentName` function is used to generate the component name in the format of `${dirname}-${originalName}`.For instance, for a file named`MyButton.vue` in `src/components/Button`, it will be`Button-MyButton`.

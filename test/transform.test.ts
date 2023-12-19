@@ -4,18 +4,18 @@ import ComponentB from "./components/ComponentB/index.vue?raw"
 import TestSetupName from "./components/index.vue?raw"
 import ExportDefaultExists from "./components/ExportDefault/index.vue?raw"
 import { createTransform } from "../src/core/createTransform"
-import { GeComponentName } from '../src/types'
+import { GenComponentName } from '../src/types'
 
 const defaultInclide = ["**/index.vue"]
 const defaultExclide = [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/]
-const defaultGeComponentName: GeComponentName = ({ attrName, dirname }) => attrName ?? dirname
+const defaultGenComponentName: GenComponentName = ({ attrName, dirname }) => attrName ?? dirname
 import { createFilter } from "@rollup/pluginutils"
 
 describe('The behavior of transform in Vue 3.3.0 and above.', () => {
   const filter = createFilter(defaultInclide, defaultExclide)
   const transform = createTransform("3.3.0", [{
     filter: filter,
-    geComponentName: defaultGeComponentName
+    genComponentName: defaultGenComponentName
   }])
   it('Component name is dirname', () => {
     const code = transform(ComponentA, 'components/ComponentA/index.vue')?.code
@@ -55,7 +55,7 @@ describe('The behavior of transform in Vue 3.3.0 and above.', () => {
 describe('The behavior of transform in Vue 3.3.0 and below.', () => {
   const transform = createTransform("3.2.47", [{
     filter: createFilter(defaultInclide, defaultExclide),
-    geComponentName: defaultGeComponentName
+    genComponentName: defaultGenComponentName
   }])
   it('Component name is dirname', () => {
     const code = transform(ComponentA, 'components/ComponentA/index.vue')?.code

@@ -3,13 +3,13 @@ import { readFile } from "fs/promises"
 import { createUnplugin } from "unplugin"
 import { createFilter } from "@rollup/pluginutils"
 import { minVersion } from "semver"
-import type { GeComponentName, Options } from "../types"
+import type { GenComponentName, Options } from "../types"
 import { parseVueRequest } from "./utils"
 import { createTransform } from "./createTransform"
 
 const defaultInclide = ["**/index.vue"]
 const defaultExclide = [/[\\/]node_modules[\\/]/, /[\\/]\.git[\\/]/, /[\\/]\.nuxt[\\/]/]
-const defaultGeComponentName: GeComponentName = ({ attrName, dirname }) => attrName ?? dirname
+const defaultGenComponentName: GenComponentName = ({ attrName, dirname }) => attrName ?? dirname
 
 export default createUnplugin((options: Options = {}) => {
   const filter = createFilter(
@@ -17,15 +17,15 @@ export default createUnplugin((options: Options = {}) => {
     options.exclude || defaultExclide,
   )
 
-  const filters = options.enter?.map(({ include, exclude, geComponentName }) => ({ filter: createFilter(include, exclude), geComponentName })) ?? [{
+  const filters = options.enter?.map(({ include, exclude, genComponentName }) => ({ filter: createFilter(include, exclude), genComponentName })) ?? [{
     filter: createFilter(defaultInclide, defaultExclide),
-    geComponentName: defaultGeComponentName
+    genComponentName: defaultGenComponentName
   }]
 
   let vueVersion: string | undefined
 
   return {
-    name: "GeComponentName",
+    name: "GenComponentName",
     enforce: 'pre',
     async buildStart() {
       const packageJsonPath = resolve(process.cwd(), 'package.json');

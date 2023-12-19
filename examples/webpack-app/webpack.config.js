@@ -1,7 +1,7 @@
 const path = require('path')
 const { VueLoaderPlugin } = require('vue-loader')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const GeComponentName = require('unplugin-generate-component-name/webpack');
+const GenComponentName = require('unplugin-generate-component-name/webpack');
 const { DefinePlugin } = require('webpack');
 const isProduction = process.env.NODE_ENV === 'production'
 module.exports = {
@@ -17,7 +17,7 @@ module.exports = {
       title: 'webpack-app'
     }),
     new VueLoaderPlugin(),
-    GeComponentName.default()
+    GenComponentName.default()
   ],
   entry: {
     main: path.resolve(__dirname, './src/main.ts')
