@@ -1,8 +1,8 @@
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
 import type { FilteringRules } from '../types'
-// @ts-ignore
 import traverse from '@babel/traverse'
+import { isCallExpression, isIdentifier, isObjectExpression, isObjectProperty } from "@babel/types";
 import { gte } from "semver"
 import { getComponentName, parseVueRequest } from "./utils"
 
@@ -22,41 +22,69 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
       traverse({
         "type": "Program",
         "sourceType": "module",
+        sourceFile: filename,
+        directives: [],
         body: [...scriptAst ?? [], ...scriptSetupAst ?? []]
       }, {
         noScope: true,
-        ExportDefaultDeclaration(path: { node: { declaration: { type: string; properties: any[] } } }) {
+        ExportDefaultDeclaration(path) {
           if (hasNameProperty) { return }
-          if (path.node.declaration.type === 'ObjectExpression') {
-            hasNameProperty = path.node.declaration.properties.some(
-              property => property.key.name === 'name'
+          if (isObjectExpression(path.node.declaration)) {
+            hasNameProperty = (path.node).declaration.properties.some(
+              property => isObjectProperty(property) &&
+                isIdentifier(property.key) &&
+                property.key.name === 'name'
             );
           }
+          if (isCallExpression(path.node.declaration)) {
+            const callExpr = path.node.declaration;
+            if (isIdentifier(callExpr.callee) && callExpr.callee.name === "defineComponent") {
+              const arg = callExpr.arguments?.[0];
+              const componentName = getComponentName({ filters, filename, attrs })
+              if (arg && isObjectExpression(arg)) {
+                for (const property of arg.properties) {
+                  if (isObjectProperty(property) && isIdentifier(property.key) && property.key.name === "name") {
+                    hasNameProperty = true;
+                  }
+                }
+              }
+              if (!hasNameProperty) {
+                const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
+                const startPos = defineOptionsCode.indexOf('{') + 1;
+                s.appendLeft(callExpr.start! + loc.start.offset + startPos, `name:'${componentName}',`);
+                code = s.toString();
+                isHandle = true;
+              }
+            }
+          }
         },
-        CallExpression(path: any) {
+        CallExpression(path) {
           if (hasNameProperty) { return }
           const callExpr = path.node;
-          if (callExpr.callee.type === "Identifier" && callExpr.callee.name === "defineOptions") {
+          if (isIdentifier(callExpr.callee) && callExpr.callee.name === "defineOptions") {
             const arg = callExpr.arguments?.[0];
             const componentName = getComponentName({ filters, filename, attrs })
             if (arg && arg.type === "ObjectExpression") {
               for (const property of arg.properties) {
-                if (property.key.name === "name" && property.value.type === "StringLiteral") {
+                if (isObjectProperty(property) &&
+                  isIdentifier(property.key) && property.key.name === "name") {
                   hasNameProperty = true;
                 }
               }
               if (!hasNameProperty) {
-                const defineOptionsCode = s.slice(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset)
+                const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
                 const startPos = defineOptionsCode.indexOf('{') + 1;
-                s.appendLeft(callExpr.start + loc.start.offset + startPos, `name:'${componentName}',`);
+                s.appendLeft(callExpr.start! + loc.start.offset + startPos, `name:'${componentName}',`);
                 code = s.toString();
               }
             } else {
               const newCall = `defineOptions({name: "${componentName}"});\n`;
-              s.overwrite(callExpr.start + loc.start.offset, callExpr.end + loc.start.offset, newCall);
+              s.overwrite(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset, newCall);
               code = s.toString();
             }
+
             isHandle = true;
+
           }
         },
       })
@@ -77,11 +105,13 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
         traverse({
           "type": "Program",
           "sourceType": "module",
+          sourceFile: filename,
+          directives: [],
           body: [...scriptSetupAst ?? []],
         }, {
           noScope: true,
-          ImportDeclaration(path: any) {
-            lastImportEnd = path.node.end
+          ImportDeclaration(path) {
+            lastImportEnd = path.node.end ?? 0
             const specifiers = path.node.specifiers;
             for (const specifier of specifiers) {
               if (specifier.local.name === "defineOptions") {
@@ -107,12 +137,14 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
           traverse({
             "type": "Program",
             "sourceType": "module",
+            sourceFile: filename,
+            directives: [],
             body: [...scriptAst ?? []],
           }, {
             noScope: true,
-            ExportDefaultDeclaration(path: any) {
+            ExportDefaultDeclaration(path) {
               ExportDefaultExist = true
-              if (path.node.declaration.type === 'ObjectExpression') {
+              if (isObjectExpression(path.node.declaration)) {
                 const ExportDefaultIndex = code.indexOf('export default')
                 s.appendLeft(code.slice(ExportDefaultIndex).indexOf('{') + ExportDefaultIndex + 1, `name:'${componentName}',`)
                 code = s.toString()

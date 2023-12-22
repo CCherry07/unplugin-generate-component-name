@@ -13,10 +13,10 @@ A plugin for auto generate vue component name.
 
 ```bash
 # Yarn
-$ yarn add unplugin-generate-component-name
+$ yarn add unplugin-generate-component-name -D
 
 # Pnpm
-$ pnpm i unplugin-generate-component-name
+$ pnpm i unplugin-generate-component-name -D
 ```
 
 <details>
