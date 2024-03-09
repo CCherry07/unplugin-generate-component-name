@@ -1,10 +1,13 @@
 import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
 import type { FilteringRules } from '../types'
-import traverse from '@babel/traverse'
+import _traverse from '@babel/traverse'
 import { isCallExpression, isIdentifier, isObjectExpression, isObjectProperty } from "@babel/types";
 import { gte } from "semver"
 import { getComponentName, parseVueRequest } from "./utils"
+
+// fix side-effect of how the CJS-ESM interop
+const traverse = (typeof (_traverse as any)?.default === "function" ? (_traverse as any).default : _traverse) as typeof _traverse
 
 export const createTransform = (vueVersion?: string, filters?: FilteringRules) => {
   return (code: string, id: string) => {
@@ -22,7 +25,6 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
       traverse({
         "type": "Program",
         "sourceType": "module",
-        sourceFile: filename,
         directives: [],
         body: [...scriptAst ?? [], ...scriptSetupAst ?? []]
       }, {
@@ -105,7 +107,6 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
         traverse({
           "type": "Program",
           "sourceType": "module",
-          sourceFile: filename,
           directives: [],
           body: [...scriptSetupAst ?? []],
         }, {
@@ -137,7 +138,6 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
           traverse({
             "type": "Program",
             "sourceType": "module",
-            sourceFile: filename,
             directives: [],
             body: [...scriptAst ?? []],
           }, {
