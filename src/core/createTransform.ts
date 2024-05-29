@@ -50,7 +50,7 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
                       hasNameProperty = true;
                     }
                   }
-                } else if((isFunctionExpression(arg) || isArrowFunctionExpression(arg))) {               
+                } else if(isFunctionExpression(arg) || isArrowFunctionExpression(arg)) {               
                     const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
                     const startPos = defineOptionsCode.indexOf('(') + 1;
                     s.appendLeft(callExpr.start! + loc.start.offset + startPos, `{name:'${componentName}',setup:`);
@@ -83,7 +83,7 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
                   hasNameProperty = true;
                 }
               }
-              if (!hasNameProperty) {  
+              if (!hasNameProperty) {
                 const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
                 const startPos = defineOptionsCode.indexOf('{') + 1;
                 s.appendLeft(callExpr.start! + loc.start.offset + startPos, `name:'${componentName}',`);
