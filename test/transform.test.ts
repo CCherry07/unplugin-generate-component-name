@@ -3,6 +3,7 @@ import ComponentA from "./components/ComponentA/index.vue?raw"
 import ComponentB from "./components/ComponentB/index.vue?raw"
 import TestSetupName from "./components/index.vue?raw"
 import ExportDefaultExists from "./components/ExportDefault/index.vue?raw"
+import SetupFunction from "./components/SetupFunction/index.vue?raw"
 import { createTransform } from "../src/core/createTransform"
 import { GenComponentName } from '../src/types'
 
@@ -126,6 +127,30 @@ describe('The behavior of transform in Vue 3.3.0 and below.', () => {
       const b = ('component B')
       </script>
       "
+    `)
+  })
+  it('when only setup function', () => {
+    const code = transform(SetupFunction, 'components/SetupFunction/index.vue')?.code
+   console.log(code)
+    expect(code).toContain(`name:'SetupFunction'`)
+    expect(code).toContain(`setup:()=>{`)
+    expect(code).toContain(`msg: 'Component SetupFunction'`)
+    expect(code).toMatchInlineSnapshot(`
+    "<template>
+      <div>
+        <h1>{{msg}}</h1>
+      </div>
+    </template>
+    
+    <script lang="ts">
+    import {defineComponent} from "vue"
+    export default defineComponent({name:'SetupFunction',setup:()=>{
+          return {
+            msg: 'Component SetupFunction'
+          }
+    }})
+    </script>
+    "
     `)
   })
 })

@@ -2,7 +2,7 @@ import { parse as vueParse, compileScript } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
 import type { FilteringRules } from '../types'
 import _traverse from '@babel/traverse'
-import { isCallExpression, isIdentifier, isObjectExpression, isObjectProperty } from "@babel/types";
+import { isCallExpression, isIdentifier, isObjectExpression, isObjectProperty,isFunctionExpression,isArrowFunctionExpression } from "@babel/types";
 import { gte } from "semver"
 import { getComponentName, parseVueRequest } from "./utils"
 
@@ -43,12 +43,22 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
             if (isIdentifier(callExpr.callee) && callExpr.callee.name === "defineComponent") {
               const arg = callExpr.arguments?.[0];
               const componentName = getComponentName({ filters, filename, attrs })
-              if (arg && isObjectExpression(arg)) {
-                for (const property of arg.properties) {
-                  if (isObjectProperty(property) && isIdentifier(property.key) && property.key.name === "name") {
-                    hasNameProperty = true;
+              if(arg){
+                if (isObjectExpression(arg)) {
+                  for (const property of arg.properties) {
+                    if (isObjectProperty(property) && isIdentifier(property.key) && property.key.name === "name") {
+                      hasNameProperty = true;
+                    }
                   }
-                }
+                } else if((isFunctionExpression(arg) || isArrowFunctionExpression(arg))) {               
+                    const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
+                    const startPos = defineOptionsCode.indexOf('(') + 1;
+                    s.appendLeft(callExpr.start! + loc.start.offset + startPos, `{name:'${componentName}',setup:`);
+                    s.appendRight(callExpr.end! + loc.start.offset - 1, `}`);
+                    code = s.toString();
+                    isHandle = true;
+                    return;
+                  }
               }
               if (!hasNameProperty) {
                 const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
@@ -73,7 +83,7 @@ export const createTransform = (vueVersion?: string, filters?: FilteringRules) =
                   hasNameProperty = true;
                 }
               }
-              if (!hasNameProperty) {
+              if (!hasNameProperty) {  
                 const defineOptionsCode = s.slice(callExpr.start! + loc.start.offset, callExpr.end! + loc.start.offset)
                 const startPos = defineOptionsCode.indexOf('{') + 1;
                 s.appendLeft(callExpr.start! + loc.start.offset + startPos, `name:'${componentName}',`);
